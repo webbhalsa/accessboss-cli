@@ -1,0 +1,74 @@
+lambda_url: "https://d9yad8uh69.execute-api.eu-west-1.amazonaws.com/access/response"
+
+oidc:
+  client_id: "cdc0fe45-5a35-4104-af6f-b601d38f8f37"
+  tenant_id: "26ddff0b-4d67-4bd3-900d-076874213873"
+  api_scope: "cdc0fe45-5a35-4104-af6f-b601d38f8f37/.default"
+
+boundary:
+  addr: "https://5d82a964-2647-44fa-bef0-13702cfd8a1a.boundary.hashicorp.cloud"
+  auth_method_id: "amoidc_j8X6JZGv29"
+  scope_id: "o_zLumu2ha9M"
+
+scopes:
+  # Database scopes — also provisions ephemeral credentials via Boundary
+  prod_fr_db_read_only:
+    description: "Read-only access to the prod-fr database"
+    boundary:
+      target_name: "prod-fr-monolith-read-only"
+      scope_id: "p_rYPtpxohQW"
+
+  prod_fr_db_read_write:
+    description: "Read-write access to the prod-fr database"
+    boundary:
+      target_name: "prod-fr-monolith-read-write"
+      scope_id: "p_rYPtpxohQW"
+
+  prod_main_db_read_only:
+    description: "Read-only access to the prod-main database"
+    boundary:
+      target_name: "prod-main-monolith-read-only"
+      scope_id: "p_ZVwGyimeqv"
+
+  prod_main_db_read_write:
+    description: "Read-write access to the prod-main database"
+    boundary:
+      target_name: "prod-main-monolith-read-write"
+      scope_id: "p_ZVwGyimeqv"
+
+  # AWS resource scopes
+  admins:
+    description: "Full administrator privileges including IAM — use with care"
+
+  cloudfront:
+    description: "Full access to CloudFront resources"
+
+  compute:
+    description: "Full access to compute services (EC2, ECS, Lambda)"
+
+  dns:
+    description: "Full access to Route53 (create/update DNS records)"
+
+  kms:
+    description: "Full access to KMS resources"
+
+  orka_run:
+    description: "Access to run Orka"
+
+  ps:
+    description: "Full access to Parameter Store resources"
+
+  s3:
+    description: "Full access to S3 resources"
+
+  secretsmanager:
+    description: "Full access to Secrets Manager"
+
+  sns:
+    description: "Full access to SNS resources"
+
+  terraform-data-engineering:
+    description: "All privileges required for data engineering Terraform operations"
+
+  terraform-prod:
+    description: "Privileges required to Terraform in production accounts"
