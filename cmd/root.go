@@ -86,7 +86,7 @@ var rootCmd = &cobra.Command{
 
 		if postErr != nil {
 			if errors.Is(postErr, lambda.ErrTimeout) {
-				return fmt.Errorf("timed out waiting for Entra — access may still be granted, check AWS SSO")
+				return fmt.Errorf("timed out waiting for Entra — access may still be granted, keep an eye on #aws-access-requests in Teams")
 			}
 			return postErr
 		}
