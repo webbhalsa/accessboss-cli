@@ -11,7 +11,7 @@ import (
 
 var (
 	stylePlaceholder  = lipgloss.NewStyle().Foreground(lipgloss.Color("241"))
-	styleUpdateBanner = lipgloss.NewStyle().Foreground(lipgloss.Color("226")).Bold(true)
+	styleUpdateBanner = lipgloss.NewStyle().Foreground(lipgloss.Color("178")).Bold(true)
 )
 
 type ScopeItem struct {
