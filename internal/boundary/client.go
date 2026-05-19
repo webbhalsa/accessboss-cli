@@ -18,8 +18,6 @@ type Credentials struct {
 	Password string
 }
 
-// authorizeSessionResponse mirrors the relevant parts of the JSON output from
-// `boundary targets authorize-session -format json`.
 type authorizeSessionResponse struct {
 	Item struct {
 		Credentials []struct {
@@ -28,7 +26,6 @@ type authorizeSessionResponse struct {
 			} `json:"secret"`
 		} `json:"credentials"`
 	} `json:"item"`
-	// present when boundary returns an error
 	StatusCode int `json:"status_code"`
 	APIError   *struct {
 		Kind    string `json:"kind"`
@@ -36,44 +33,79 @@ type authorizeSessionResponse struct {
 	} `json:"api_error"`
 }
 
-// GetCredentials authenticates with Boundary if needed and returns ephemeral
-// database credentials for the given target, retrying for up to 3 minutes to
-// handle Entra PIM propagation delays.
+type listTargetsResponse struct {
+	Items []struct {
+		Name string `json:"name"`
+	} `json:"items"`
+}
+
+// GetCredentials authenticates with Boundary and returns ephemeral database
+// credentials for the given target, retrying for up to 3 minutes to handle
+// Entra PIM propagation delays.
 func GetCredentials(server config.BoundaryServerConfig, target config.BoundaryTarget) (*Credentials, error) {
 	if _, err := exec.LookPath("boundary"); err != nil {
 		return nil, fmt.Errorf("boundary CLI not found — install it from https://developer.hashicorp.com/boundary/install")
 	}
 
-	fmt.Println("Authenticating with Boundary...")
-	if err := authenticate(server); err != nil {
-		return nil, fmt.Errorf("boundary authentication failed: %w", err)
-	}
-
-	printedWaiting := false
 	deadline := time.Now().Add(3 * time.Minute)
 
 	for {
-		spinner := tui.StartSpinner("Fetching credentials...")
+		fmt.Println("Authenticating with Boundary...")
+		if err := authenticate(server); err != nil {
+			return nil, fmt.Errorf("boundary authentication failed: %w", err)
+		}
+
+		spinner := tui.StartSpinner("Checking access...")
+		accessible := canAccessTarget(server, target.TargetName)
+		spinner.Stop()
+
+		if !accessible {
+			if time.Now().Before(deadline) {
+				wait := tui.StartSpinner("Waiting for Entra permissions to propagate to Boundary...")
+				time.Sleep(30 * time.Second)
+				wait.Stop()
+				continue
+			}
+			return nil, fmt.Errorf("timed out waiting for Boundary access to be provisioned")
+		}
+
+		spinner = tui.StartSpinner("Fetching credentials...")
 		creds, err := authorizeSession(server, target)
 		spinner.Stop()
 
-		if err == nil {
-			return creds, nil
+		if err != nil {
+			return nil, err
 		}
-
-		if isPermissionDenied(err) && time.Now().Before(deadline) {
-			if !printedWaiting {
-				fmt.Println("Waiting for Entra permissions to propagate to Boundary...")
-				printedWaiting = true
-			}
-			wait := tui.StartSpinner("Retrying in 10 seconds...")
-			time.Sleep(10 * time.Second)
-			wait.Stop()
-			continue
-		}
-
-		return nil, err
+		return creds, nil
 	}
+}
+
+func canAccessTarget(server config.BoundaryServerConfig, targetName string) bool {
+	cmd := exec.Command("boundary", "targets", "list",
+		"-scope-id", server.ScopeID,
+		"-recursive",
+		"-format", "json",
+	)
+	cmd.Env = append(os.Environ(), "BOUNDARY_ADDR="+server.Addr)
+
+	var stdout bytes.Buffer
+	cmd.Stdout = &stdout
+
+	if err := cmd.Run(); err != nil {
+		return false
+	}
+
+	var resp listTargetsResponse
+	if err := json.Unmarshal(stdout.Bytes(), &resp); err != nil {
+		return false
+	}
+
+	for _, item := range resp.Items {
+		if item.Name == targetName {
+			return true
+		}
+	}
+	return false
 }
 
 func authenticate(server config.BoundaryServerConfig) error {
@@ -101,7 +133,6 @@ func authorizeSession(server config.BoundaryServerConfig, target config.Boundary
 	cmd.Stderr = &stderr
 
 	if err := cmd.Run(); err != nil {
-		// try to get a useful error from the JSON body first
 		var resp authorizeSessionResponse
 		if jsonErr := json.Unmarshal(stdout.Bytes(), &resp); jsonErr == nil && resp.APIError != nil {
 			return nil, fmt.Errorf("%s: %s", resp.APIError.Kind, resp.APIError.Message)
@@ -122,11 +153,4 @@ func authorizeSession(server config.BoundaryServerConfig, target config.Boundary
 		}
 	}
 	return nil, fmt.Errorf("no credentials found in boundary response")
-}
-
-func isPermissionDenied(err error) bool {
-	msg := strings.ToLower(err.Error())
-	return strings.Contains(msg, "permissiondenied") ||
-		strings.Contains(msg, "forbidden") ||
-		strings.Contains(msg, "403")
 }

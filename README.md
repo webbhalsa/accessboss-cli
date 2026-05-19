@@ -39,6 +39,20 @@ If a newer version is available, a banner is shown as a footer in the scope pick
 Update available: v1.0.0 → v1.1.0  Run: brew upgrade accessboss
 ```
 
+## Database access
+
+For database scopes, accessboss provisions ephemeral credentials via [HashiCorp Boundary](https://www.boundaryproject.io/) after granting the Entra PIM access. The flow is:
+
+1. The Lambda grants access by adding you to the relevant Entra group
+2. `boundary authenticate oidc` opens a browser — sign in with your Kry account to get a Boundary token with your current group memberships
+3. accessboss checks if the requested target is visible to you (`boundary targets list`) — if not, Entra hasn't propagated to Boundary yet
+4. If the target isn't visible yet, accessboss waits 30 seconds, re-authenticates (fresh browser login to pick up the new membership), and retries — giving up after 3 minutes
+5. Once the target is visible, `boundary targets authorize-session` fetches an ephemeral username and password (valid for 1 hour)
+
+The re-authentication on each retry is necessary because the Boundary token is a snapshot of group memberships at login time — a stale token won't reflect newly granted access.
+
+Boundary must be installed: `brew install boundary`
+
 ## Access scopes
 
 Scopes are baked into the binary. The list includes both plain AWS resource scopes (`kms`, `s3`, `compute`, etc.) and database scopes (`prod_main_db_read_only`, `prod_fr_db_read_write`, etc.) which additionally provision Boundary credentials.
