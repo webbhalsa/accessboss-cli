@@ -20,15 +20,18 @@ func StartSpinner(msg string) *Spinner {
 		stop: make(chan struct{}),
 		done: make(chan struct{}),
 	}
+	fmt.Print("\033[?25l") // hide cursor
 	go func() {
-		defer close(s.done)
+		defer func() {
+			fmt.Print("\033[2K\033[1G\033[?25h") // clear line, restore cursor
+			close(s.done)
+		}()
 		for i := 0; ; i++ {
 			select {
 			case <-s.stop:
-				fmt.Print("\r\033[K")
 				return
 			default:
-				fmt.Printf("\r%s %s", spinnerStyle.Render(spinnerFrames[i%len(spinnerFrames)]), msg)
+				fmt.Printf("\033[2K\033[1G%s %s", spinnerStyle.Render(spinnerFrames[i%len(spinnerFrames)]), msg)
 				time.Sleep(80 * time.Millisecond)
 			}
 		}
