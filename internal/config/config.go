@@ -11,10 +11,11 @@ import (
 var raw []byte
 
 type Config struct {
-	LambdaURL string              `yaml:"lambda_url"`
-	OIDC      OIDCConfig          `yaml:"oidc"`
+	LambdaURL string               `yaml:"lambda_url"`
+	StatusURL string               `yaml:"status_url"`
+	OIDC      OIDCConfig           `yaml:"oidc"`
 	Boundary  BoundaryServerConfig `yaml:"boundary"`
-	Scopes    map[string]Scope    `yaml:"scopes"`
+	Scopes    map[string]Scope     `yaml:"scopes"`
 }
 
 type OIDCConfig struct {

@@ -7,6 +7,7 @@ import (
 	"os"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/spf13/cobra"
 	"github.com/webbhalsa/accessboss-cli/internal/auth"
@@ -48,7 +49,7 @@ var rootCmd = &cobra.Command{
 			return err
 		}
 		if chosen == "" {
-			return nil // user cancelled
+			return nil
 		}
 
 		duration, err := tui.PickDuration()
@@ -56,7 +57,7 @@ var rootCmd = &cobra.Command{
 			return err
 		}
 		if duration == "" {
-			return nil // user cancelled
+			return nil
 		}
 
 		reason, err := promptReason()
@@ -73,8 +74,9 @@ var rootCmd = &cobra.Command{
 		}
 
 		scopeDef := cfg.Scopes[chosen]
+
 		spinner := tui.StartSpinner(fmt.Sprintf("Requesting %s access to %q as %s... 🐌", duration, chosen, claims.Name))
-		postErr := lambda.Post(cfg.LambdaURL, token, lambda.RequestBody{
+		result, postErr := lambda.Post(cfg.LambdaURL, token, lambda.RequestBody{
 			Duration:       duration,
 			MessageID:      "N/A",
 			Reason:         reason,
@@ -91,10 +93,16 @@ var rootCmd = &cobra.Command{
 			return postErr
 		}
 
-		fmt.Printf("Access granted: %s\n", scopeDef.Description)
+		if result.AlreadyMember {
+			fmt.Printf("Access granted: %s\n", scopeDef.Description)
+		} else {
+			if err := pollForGroup(cfg.StatusURL, token, "AWS_SSO_"+chosen); err != nil {
+				return err
+			}
+			fmt.Printf("Access granted: %s\n", scopeDef.Description)
+		}
 
 		if scopeDef.IsDatabase() {
-			fmt.Println("Fetching database credentials from Boundary...")
 			creds, err := boundary.GetCredentials(cfg.Boundary, *scopeDef.Boundary)
 			if err != nil {
 				return fmt.Errorf("boundary: %w", err)
@@ -104,6 +112,25 @@ var rootCmd = &cobra.Command{
 
 		return nil
 	},
+}
+
+func pollForGroup(statusURL, token, expectedGroup string) error {
+	spinner := tui.StartSpinner("Syncing access from Entra to AWS...")
+	defer spinner.Stop()
+
+	deadline := time.Now().Add(5 * time.Minute)
+	for time.Now().Before(deadline) {
+		status, err := lambda.GetStatus(statusURL, token)
+		if err == nil {
+			for _, g := range status.Groups {
+				if g == expectedGroup {
+					return nil
+				}
+			}
+		}
+		time.Sleep(5 * time.Second)
+	}
+	return fmt.Errorf("timed out waiting for AWS provisioning — check #aws-access-requests in Teams")
 }
 
 func printDBCredentials(creds *boundary.Credentials) {
@@ -131,4 +158,3 @@ func Execute(version string) {
 		os.Exit(1)
 	}
 }
-

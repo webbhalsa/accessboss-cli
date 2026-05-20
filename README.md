@@ -29,7 +29,8 @@ This will:
 3. Prompt for a reason
 4. Open a browser to authenticate with your Kry account
 5. Request access via the AccessBoss Lambda
-6. For database scopes: authenticate with Boundary and print ephemeral credentials
+6. Poll until AWS Identity Center confirms the group membership is active
+7. For database scopes: authenticate with Boundary and print ephemeral credentials
 
 ### Update notifications
 
@@ -41,15 +42,13 @@ Update available: v1.0.0 → v1.1.0  Run: brew upgrade accessboss
 
 ## Database access
 
-For database scopes, accessboss provisions ephemeral credentials via [HashiCorp Boundary](https://www.boundaryproject.io/) after granting the Entra PIM access. The flow is:
+For database scopes, accessboss provisions ephemeral credentials via [HashiCorp Boundary](https://www.boundaryproject.io/) after granting access. The full flow is:
 
-1. The Lambda grants access by adding you to the relevant Entra group
-2. `boundary authenticate oidc` opens a browser — sign in with your Kry account to get a Boundary token with your current group memberships
-3. accessboss checks if the requested target is visible to you (`boundary targets list`) — if not, Entra hasn't propagated to Boundary yet
-4. If the target isn't visible yet, accessboss waits 30 seconds, re-authenticates (fresh browser login to pick up the new membership), and retries — giving up after 3 minutes
-5. Once the target is visible, `boundary targets authorize-session` fetches an ephemeral username and password (valid for 1 hour)
-
-The re-authentication on each retry is necessary because the Boundary token is a snapshot of group memberships at login time — a stale token won't reflect newly granted access.
+1. The Lambda grants access by adding you to the relevant Entra group and returns immediately
+2. accessboss polls `GET /access/status` every 5 seconds until the `AWS_SSO_{scope}` group appears in your AWS Identity Center memberships (up to 5 minutes)
+3. Once confirmed, `boundary authenticate oidc` opens a browser — sign in with your Kry account to get a Boundary token reflecting your current group memberships
+4. accessboss checks if the requested target is visible (`boundary targets list`) and retries with a fresh login if not
+5. `boundary targets authorize-session` fetches an ephemeral username and password (valid for 1 hour)
 
 Boundary must be installed: `brew install boundary`
 
