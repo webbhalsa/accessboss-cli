@@ -5,7 +5,7 @@ A CLI for requesting ephemeral AWS access — pick a scope, give a reason, and g
 ## Installation
 
 ```bash
-brew tap webbhalsa/tap
+brew tap webbhalsa/tap  # only needed if not already set up!
 brew install accessboss
 ```
 
@@ -58,7 +58,7 @@ Scopes are baked into the binary. The list includes both plain AWS resource scop
 
 ## Requirements
 
-Your Kry account must be assigned to the `accessboss-cli` app in Entra ID. If you get an authentication error, ask in **#platform-tools** to be added.
+Your Kry account must be assigned to the `accessboss-cli` app in Entra ID. If you get an authentication error, ask in **Ask Platform Engineering** to be added.
 
 ---
 
