@@ -115,7 +115,7 @@ var rootCmd = &cobra.Command{
 }
 
 func pollForGroup(statusURL, token, expectedGroup string) error {
-	spinner := tui.StartSpinner("Syncing access from Entra to AWS...")
+	spinner := tui.StartSpinner("Waiting for Entra → AWS sync...")
 	defer spinner.Stop()
 
 	deadline := time.Now().Add(5 * time.Minute)
