@@ -14,6 +14,7 @@ import (
 	"github.com/webbhalsa/accessboss-cli/internal/boundary"
 	"github.com/webbhalsa/accessboss-cli/internal/config"
 	"github.com/webbhalsa/accessboss-cli/internal/lambda"
+	"github.com/webbhalsa/accessboss-cli/internal/notify"
 	"github.com/webbhalsa/accessboss-cli/internal/tui"
 )
 
@@ -95,11 +96,13 @@ var rootCmd = &cobra.Command{
 
 		if result.AlreadyMember {
 			fmt.Printf("Access granted: %s\n", scopeDef.Description)
+			notify.Send("accessboss", "Access granted: "+scopeDef.Description)
 		} else {
 			if err := pollForGroup(cfg.StatusURL, token, "AWS_SSO_"+chosen); err != nil {
 				return err
 			}
 			fmt.Printf("Access granted: %s\n", scopeDef.Description)
+			notify.Send("accessboss", "Access granted: "+scopeDef.Description)
 		}
 
 		if scopeDef.IsDatabase() {
@@ -155,6 +158,7 @@ func Execute(version string) {
 	currentVersion = version
 	rootCmd.Version = version
 	if err := rootCmd.Execute(); err != nil {
+		notify.Send("accessboss", "Error: "+err.Error())
 		os.Exit(1)
 	}
 }
