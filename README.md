@@ -15,6 +15,26 @@ To upgrade to the latest version:
 brew upgrade accessboss
 ```
 
+### Windows (via WSL)
+
+Install [WSL](https://learn.microsoft.com/en-us/windows/wsl/install) first. Note: the browser will not open automatically during login — click the URL printed in the terminal, or copy and paste it into your Windows browser.
+
+**Option 1 — Manual install (recommended):**
+
+```bash
+curl -L https://github.com/webbhalsa/accessboss-cli/releases/latest/download/accessboss_linux_amd64.tar.gz | tar xz
+sudo mv accessboss /usr/local/bin/
+```
+
+**Option 2 — Homebrew:**
+
+Install [Homebrew on Linux](https://docs.brew.sh/Homebrew-on-Linux), then:
+
+```bash
+brew tap webbhalsa/tap  # only needed if not already set up!
+brew install accessboss
+```
+
 ## Usage
 
 Run `accessboss` to open an interactive scope picker:
