@@ -146,6 +146,7 @@ func PickScope(scopes []ScopeItem, currentVersion string, checkFn func(string) s
 	delegate := list.NewDefaultDelegate()
 	l := list.New(items, delegate, 0, 0)
 	l.SetShowTitle(false)
+	l.SetShowStatusBar(false)
 	l.SetFilteringEnabled(false)
 	l.SetShowHelp(false)
 
