@@ -138,7 +138,10 @@ func pollForGroup(statusURL, token, expectedGroup string) error {
 
 func printDBCredentials(creds *boundary.Credentials) {
 	fmt.Println()
-	fmt.Println("Database credentials (valid for 1 hour):")
+	if creds.Description != "" {
+		fmt.Println(creds.Description)
+	}
+	fmt.Println("Database credentials (valid for 1 hour — re-run accessboss to get fresh credentials within your access window):")
 	fmt.Printf("  Username: %s\n", creds.Username)
 	fmt.Printf("  Password: %s\n", creds.Password)
 	fmt.Println()

@@ -14,13 +14,17 @@ import (
 )
 
 type Credentials struct {
-	Username string
-	Password string
+	Username    string
+	Password    string
+	Description string
 }
 
 type authorizeSessionResponse struct {
 	Item struct {
 		Credentials []struct {
+			CredentialSource struct {
+				Description string `json:"description"`
+			} `json:"credential_source"`
 			Secret struct {
 				Decoded map[string]string `json:"decoded"`
 			} `json:"secret"`
@@ -149,7 +153,7 @@ func authorizeSession(server config.BoundaryServerConfig, target config.Boundary
 		user := c.Secret.Decoded["username"]
 		pass := c.Secret.Decoded["password"]
 		if user != "" && pass != "" {
-			return &Credentials{Username: user, Password: pass}, nil
+			return &Credentials{Username: user, Password: pass, Description: c.CredentialSource.Description}, nil
 		}
 	}
 	return nil, fmt.Errorf("no credentials found in boundary response")
